@@ -49,6 +49,13 @@ class ResearchService {
     return result;
   }
 
+  static String _commonsQuery(Topic t) {
+    const terms={
+      '01':'Roopkund skeleton lake Uttarakhand India','02':'Bhangarh Fort Rajasthan','03':'Jatinga Assam birds','04':'Indus Valley script seals','05':'Dwarka underwater archaeology Gujarat','06':'Lonar crater lake Maharashtra','07':'Kuldhara abandoned village Rajasthan','08':'Magnetic Hill Ladakh India','09':'Ajanta caves paintings Maharashtra','10':'Konark Sun Temple Odisha','11':'Bermuda Triangle ocean','12':'Nazca Lines Peru','13':'Stonehenge England','14':'Dyatlov Pass Ural mountains','15':'Mary Celeste ship','16':'Voynich manuscript','17':'Antikythera mechanism Greece','18':'Blood Falls Antarctica','19':'Cydonia Mars face','20':'Wow signal Big Ear radio telescope','21':'Kailasa Temple Ellora','22':'Shani Shingnapur Maharashtra','23':'Ashoka pillar India','24':'Mehrangarh Fort Jodhpur','25':'Kuldhara village Rajasthan','26':'North Sentinel Island Andaman','27':'Nidhivan Vrindavan','28':'Adam Bridge Ram Setu satellite','29':'Living root bridges Meghalaya','30':'Machu Picchu Peru','31':'Moai Easter Island','32':'Puma Punku Bolivia','33':'Viking longship','34':'Terracotta Army China','35':'Petra Jordan','36':'Gobekli Tepe Turkey','37':'Angkor Wat Cambodia','38':'Roman concrete Pantheon','39':'ancient submerged city Mediterranean','40':'Richat Structure Eye of Sahara Mauritania'
+    };
+    return terms[t.id]??'${t.title} ${t.place}';
+  }
+
   static Future<List<ResearchImage>> _images(String query) async {
     final uri=Uri.https('commons.wikimedia.org','/w/api.php',{
       'action':'query','generator':'search','gsrsearch':'filetype:bitmap $query',
@@ -132,7 +139,7 @@ class ResearchService {
     final script='$intro\n\n${sections.join('\n\n')}\n\n$outro';
     final wordCount=_words(script);
     if(wordCount<620) throw Exception('संदर्भों से केवल ${wordCount} शब्द मिले। 5–10 मिनट की तथ्य-आधारित Script के लिए पर्याप्त स्रोत नहीं हैं; दूसरा विषय चुनें।');
-    final images=await _images('${topic.title} ${topic.place}');
+    final images=await _images(_commonsQuery(topic));
     if(images.length<3) throw Exception('या विषयासाठी वापरता येतील असे किमान तीन मुक्त परवान्याचे चित्र सापडले नाहीत. कॉपीराइटचा धोका टाळण्यासाठी व्हिडिओ तयार केला नाही.');
     final sourceLines=relevant.map((s)=>'स्रोत: ${s.title}\n${s.url}').join('\n\n');
     final imageLines=images.map((i)=>'चित्र: ${i.credit}\nपरवाना: ${i.license}\nस्रोत: ${i.sourceUrl}').join('\n\n');
