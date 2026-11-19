@@ -105,7 +105,7 @@ class _HomeState extends State<Home> {
   }
   Future<void> speak() async {
     if(script.isEmpty)return;
-    await tts.stop();await tts.setLanguage('hi-IN');await tts.setSpeechRate(.45);await tts.setPitch(voice==0?.82:1.18);
+    await tts.stop();await tts.setLanguage('hi-IN');await tts.setSpeechRate(.45);await tts.setPitch(voice == 0 ? 0.82 : 1.18);
     final r=await tts.speak(script);
     if(mounted)setState(()=>speaking=r==1);
   }
