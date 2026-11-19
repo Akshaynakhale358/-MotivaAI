@@ -65,7 +65,7 @@ class VideoMaker {
     await titleFile.writeAsString(title,flush:true);
     onStatus('1080p video आणि subtitles तयार होत आहेत...');
     final font='/system/fonts/NotoSansDevanagari-Regular.ttf';
-    final vf="drawbox=x=55:y=65:w=1810:h=950:color=0x0B2224@0.78:t=fill,drawbox=x=80:y=90:w=1760:h=5:color=0x20D6C2@0.9:t=fill,drawtext=fontfile=$font:textfile=${_quote(titleFile.path)}:fontcolor=0x20D6C2:fontsize=58:x=(w-text_w)/2:y=150,subtitles=${_quote(srt.path)}:force_style='FontName=Noto Sans Devanagari,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BorderStyle=1,Outline=2,Alignment=2,MarginV=85'";
+    final vf="drawbox=x=55:y=65:w=1810:h=950:color=0x0B2224@0.78:t=fill,drawbox=x=80:y=90:w=1760:h=5:color=0x20D6C2@0.9:t=fill,drawtext=fontfile=$font:textfile=${titleFile.path}:fontcolor=0x20D6C2:fontsize=58:x=(w-text_w)/2:y=150,subtitles=${srt.path}";
     final command="-y -f lavfi -i color=c=0x050B0D:s=1920x1080:r=25 -i ${_quote(audio.path)} -vf ${_quote(vf)} -shortest -c:v mpeg4 -q:v 4 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart ${_quote(output.path)}";
     final session=await FFmpegKit.execute(command);
     final code=await session.getReturnCode();
