@@ -182,11 +182,11 @@ class _HomeState extends State<Home> {
       ChoiceChip(label:const Text('पुरुष शैली'),selected:voice==0,onSelected:(_)=>setState(()=>voice=0)),ChoiceChip(label:const Text('महिला शैली'),selected:voice==1,onSelected:(_)=>setState(()=>voice=1)),
     ]),
     const SizedBox(height:8),const Text('टीप: खरा पुरुष/महिला आवाज फोनमध्ये install असलेल्या Hindi voices वर अवलंबून आहे. Pitch बदलल्याने प्रत्येक फोनवर वेगळा gender voice मिळेलच असे नाही.',style:TextStyle(color:Colors.white54,fontSize:12)),
-    const SizedBox(height:20),info(Icons.high_quality,'Video Export पुढील टप्प्यात','16:9 • 1080p • 5–10 मिनिटे हे लक्ष्य आहे.'),
+    const SizedBox(height:20),info(Icons.high_quality,'1080p MP4 Export','Script आणि फोनचा Hindi TTS आवाज वापरून MP4 तयार करा. व्हिडिओची लांबी Script वर अवलंबून असेल.'),
   ]);
   Widget scriptPage()=>Column(children:[
     Padding(padding:const EdgeInsets.fromLTRB(16,12,16,4),child:Row(children:[const Expanded(child:Text('Hindi Script',style:TextStyle(fontSize:22,fontWeight:FontWeight.w800))),IconButton(onPressed:speak,icon:const Icon(Icons.play_circle_fill,color:teal,size:30)),IconButton(onPressed:stop,icon:const Icon(Icons.stop_circle_outlined)),IconButton(onPressed:generating?null:makeVideo,icon:const Icon(Icons.download_for_offline_outlined,color:teal))])),
-    Expanded(child:SingleChildScrollView(padding:const EdgeInsets.all(18),child:SelectableText(script,style:const TextStyle(fontSize:15,height:1.7)))),
+    Expanded(child:SingleChildScrollView(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('टीप: ही ऑफलाइन Template Script आहे; ऐतिहासिक/वैज्ञानिक तथ्ये YouTube वर टाकण्यापूर्वी तपासा.',style:TextStyle(color:teal,fontSize:12)),const SizedBox(height:12),SelectableText(script,style:const TextStyle(fontSize:15,height:1.7))]))),
     Padding(padding:const EdgeInsets.all(10),child:Column(children:[if(generating)const LinearProgressIndicator(color:teal),Text(speaking?'निवेदन सुरू आहे...':status,style:const TextStyle(color:teal,fontSize:12))])),
   ]);
   Widget settings()=>ListView(padding:const EdgeInsets.all(20),children:[
