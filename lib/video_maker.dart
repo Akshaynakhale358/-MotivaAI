@@ -77,11 +77,11 @@ class VideoMaker {
       throw Exception('Video render अयशस्वी. ${logs.length>900 ? logs.substring(logs.length-900) : logs}');
     }
     onStatus('Video Downloads मध्ये save होत आहे...');
-    await FileSaver.instance.saveToDownloads(
+    await FileSaver.instance.saveFileOnly(
       name:'MotivaAI_${safe}_${DateTime.now().millisecondsSinceEpoch}',
-      filePath:output.path,
+      file:output,
       fileExtension:'mp4',
-      mimeType:MimeType.mp4,
+      mimeType:MimeType.mp4Video,
       subfolder:'MotivaAI',
     );
     onStatus('Video फोनच्या Downloads/MotivaAI फोल्डरमध्ये सेव्ह झाला.');
