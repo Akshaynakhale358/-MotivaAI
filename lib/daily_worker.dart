@@ -38,8 +38,8 @@ void motivaCallbackDispatcher() {
       final tts=FlutterTts();
       await tts.setLanguage('hi-IN');
       await tts.awaitSynthCompletion(true);
-      final savedVoice=prefs.getString('female_voice');
-      final voiceJson=prefs.getString('daily_voice')??savedVoice??prefs.getString('male_voice');
+      final savedVoice=prefs.getString('male_voice');
+      final voiceJson=prefs.getString('daily_voice')??savedVoice;
       Map<String,String>? voice;
       if(voiceJson!=null) {
         final decoded=jsonDecode(voiceJson);
@@ -50,7 +50,7 @@ void motivaCallbackDispatcher() {
         title:topic.title,
         script:bundle.script,
         tts:tts,
-        voiceStyle:1,
+        voiceStyle:0,
         voice:voice,
         imagePaths:bundle.images.map((i)=>i.path).toList(),
         creditsText:bundle.credits,
