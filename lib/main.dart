@@ -79,8 +79,13 @@ class _HomeState extends State<Home> {
       }
       hindiVoices=found;
       if(hindiVoices.isNotEmpty) {
-        maleVoice??=hindiVoices.firstWhere((v)=>v['name']!.toLowerCase().contains('male')&&!v['name']!.toLowerCase().contains('female'),orElse:()=>hindiVoices.first);
-        femaleVoice??=hindiVoices.firstWhere((v)=>v['name']!.toLowerCase().contains('female'),orElse:()=>hindiVoices.length>1?hindiVoices[1]:hindiVoices.first);
+        final validKeys=hindiVoices.map(_voiceKey).toSet();
+        if(maleVoice==null||!validKeys.contains(_voiceKey(maleVoice!))) {
+          maleVoice=hindiVoices.firstWhere((v)=>v['name']!.toLowerCase().contains('male')&&!v['name']!.toLowerCase().contains('female'),orElse:()=>hindiVoices.first);
+        }
+        if(femaleVoice==null||!validKeys.contains(_voiceKey(femaleVoice!))) {
+          femaleVoice=hindiVoices.firstWhere((v)=>v['name']!.toLowerCase().contains('female'),orElse:()=>hindiVoices.length>1?hindiVoices[1]:hindiVoices.first);
+        }
         final p=await SharedPreferences.getInstance();
         await p.setString('male_voice',jsonEncode(maleVoice));
         await p.setString('female_voice',jsonEncode(femaleVoice));
