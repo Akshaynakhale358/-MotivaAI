@@ -103,7 +103,7 @@ class _HomeState extends State<Home> {
         existingWorkPolicy:ExistingWorkPolicy.keep,constraints:constraints,foregroundServiceConfig:foreground);
       await Workmanager().registerPeriodicTask(dailyUniqueName,dailyTaskName,
         frequency:const Duration(hours:24),initialDelay:const Duration(hours:24),
-        existingPeriodicWorkPolicy:ExistingPeriodicWorkPolicy.update,
+        existingWorkPolicy:ExistingPeriodicWorkPolicy.update,
         constraints:constraints,foregroundServiceConfig:foreground);
       await p.setString('daily_status','पहिला व्हिडिओ Background मध्ये सुरू होईल; नंतर साधारण 24 तासांनी नवीन व्हिडिओ तयार होईल.');
     } else {
