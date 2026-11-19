@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'video_maker.dart';
 
 void main() => runApp(const MotivaAI());
 const teal = Color(0xFF20D6C2);
@@ -51,7 +52,7 @@ class _HomeState extends State<Home> {
   final tts=FlutterTts();
   final custom=TextEditingController();
   int tab=0,voice=0;
-  bool ready=false,speaking=false;
+  bool ready=false,speaking=false,generating=false;
   List<String> used=[];
   Topic? topic;
   String script='',status='मोफत ऑफलाइन कथा निर्मिती.';
@@ -98,6 +99,16 @@ class _HomeState extends State<Home> {
     const endings=['रहस्य का आनंद लेते हुए तथ्य और कल्पना के बीच फर्क बनाए रखना जरूरी है। आपकी राय में इसकी सबसे संभावित वजह क्या हो सकती है?','शायद आने वाले समय में नई खोजें इस कहानी को और स्पष्ट करें। तब तक यह सवाल हमारी जिज्ञासा बनाए रखेगा।','इस कहानी से पता चलता है कि हर रहस्य का जवाब खोजने के लिए धैर्य और प्रमाण दोनों जरूरी हैं।'];
     return t.title+'\n\n'+openings[seed%3]+'\n\nआज हम बात कर रहे हैं '+t.place+' से जुड़े इस रहस्य की। इसका मुख्य संकेत है: '+t.clue+'।\n\nसबसे पहले इसकी पृष्ठभूमि समझते हैं। किसी भी रहस्यमयी घटना को समझने के लिए उसके समय, स्थान और उपलब्ध जानकारी को ध्यान में रखना जरूरी है। '+t.place+' का नाम इस विषय के साथ इसलिए जुड़ा है क्योंकि यहाँ से जुड़ी कुछ घटनाओं और खोजों ने लोगों की जिज्ञासा बढ़ाई।\n\nअब सबसे बड़ा सवाल है — '+t.clue+'। इस सवाल को लेकर कई तरह की व्याख्याएँ की गई हैं। एक ओर वे तथ्य हैं जिन्हें दस्तावेज़ों, शोध या प्रत्यक्ष अवलोकन से समझा जा सकता है। दूसरी ओर ऐसी कहानियाँ भी हैं जिनकी स्वतंत्र पुष्टि जरूरी है।\n\n'+turns[(seed+1)%3]+'\n\nसंभावित वजहों पर नज़र डालें तो प्राकृतिक, ऐतिहासिक और मानवीय कारणों की जाँच करनी होगी। कई बार कोई घटना उस समय के सीमित ज्ञान के कारण असाधारण लगती है, लेकिन बाद में विज्ञान और शोध उसकी बेहतर व्याख्या कर देते हैं। कुछ मामलों में जरूरी जानकारी समय के साथ खो जाती है। पुराने रिकॉर्ड, भौगोलिक बदलाव और मानवीय याददाश्त हमारी समझ को प्रभावित कर सकते हैं।\n\nइस कहानी का एक और पहलू है लोगों की कल्पना। जब किसी सवाल का पूरा जवाब नहीं मिलता, तो उसके आसपास कई किस्से बन जाते हैं। इसलिए हर दावे को सच मानने के बजाय प्रमाणों को प्राथमिकता देना जरूरी है।\n\nतो आज हमने जाना '+t.title+' के बारे में। इस विषय से जुड़े कुछ सवाल अब भी चर्चा में हैं और नई जानकारी मिलने पर हमारी समझ बदल सकती है।\n\n'+endings[(seed+2)%3]+'\n\nअगर आपको ऐसी रहस्यमयी कहानियाँ पसंद हैं, तो अगली कहानी के लिए जुड़े रहिए।';
   }
+  Future<void> makeVideo() async {
+    if(generating || topic==null || script.isEmpty)return;
+    setState((){generating=true;status='Video तयार करण्याची तयारी...';});
+    try {
+      await VideoMaker.create(title:topic!.title,script:script,tts:tts,voiceStyle:voice,onStatus:(s){if(mounted)setState(()=>status=s);});
+      if(mounted)msg('Video Downloads/MotivaAI मध्ये सेव्ह झाला.');
+    } catch(e) {
+      if(mounted){setState(()=>status='Video तयार झाला नाही.');msg(e.toString().replaceFirst('Exception: ',''));}
+    } finally {if(mounted)setState(()=>generating=false);}
+  }
   Future<void> customScript() async {
     final s=custom.text.trim();if(s.isEmpty){msg('आधी विषय लिहा.');return;}
     await setTopic(Topic('custom_'+DateTime.now().millisecondsSinceEpoch.toString(),s,'आपके चुने हुए विषय पर','इस विषय से जुड़ा अनसुलझा सवाल'));
@@ -135,6 +146,7 @@ class _HomeState extends State<Home> {
       Text(topic?.place??'',style:const TextStyle(color:teal)),const SizedBox(height:8),Text(topic?.title??'',style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text(topic?.clue??'',style:const TextStyle(color:Colors.white60)),
     ])),
     const SizedBox(height:12),FilledButton.icon(onPressed:nextTopic,icon:const Icon(Icons.refresh),label:const Text('दुसरा नवीन विषय निवडा')),
+    const SizedBox(height:10),FilledButton.icon(onPressed:generating?null:makeVideo,icon:generating?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.movie_creation_outlined),label:Text(generating?'Video तयार होत आहे...':'आजचा Video तयार करा (1080p)')),
     const SizedBox(height:16),info(Icons.history,'Repeat विषय टाळणे','वापरलेले विषय फोनमध्ये सेव्ह राहतात.'),info(Icons.record_voice_over,'Hindi Voice','फोनमध्ये उपलब्ध असलेला TTS आवाज वापरतो.'),info(Icons.cloud_off,'Free Offline Mode','या टप्प्यासाठी API key किंवा paid service लागत नाही.'),Text(status,style:const TextStyle(color:teal,fontSize:12)),
   ]);
   Widget create()=>ListView(padding:const EdgeInsets.all(20),children:[
@@ -148,9 +160,9 @@ class _HomeState extends State<Home> {
     const SizedBox(height:20),info(Icons.high_quality,'Video Export पुढील टप्प्यात','16:9 • 1080p • 5–10 मिनिटे हे लक्ष्य आहे.'),
   ]);
   Widget scriptPage()=>Column(children:[
-    Padding(padding:const EdgeInsets.fromLTRB(16,12,16,4),child:Row(children:[const Expanded(child:Text('Hindi Script',style:TextStyle(fontSize:22,fontWeight:FontWeight.w800))),IconButton(onPressed:speak,icon:const Icon(Icons.play_circle_fill,color:teal,size:30)),IconButton(onPressed:stop,icon:const Icon(Icons.stop_circle_outlined))])),
+    Padding(padding:const EdgeInsets.fromLTRB(16,12,16,4),child:Row(children:[const Expanded(child:Text('Hindi Script',style:TextStyle(fontSize:22,fontWeight:FontWeight.w800))),IconButton(onPressed:speak,icon:const Icon(Icons.play_circle_fill,color:teal,size:30)),IconButton(onPressed:stop,icon:const Icon(Icons.stop_circle_outlined)),IconButton(onPressed:generating?null:makeVideo,icon:const Icon(Icons.download_for_offline_outlined,color:teal))])),
     Expanded(child:SingleChildScrollView(padding:const EdgeInsets.all(18),child:SelectableText(script,style:const TextStyle(fontSize:15,height:1.7)))),
-    Padding(padding:const EdgeInsets.all(10),child:Text(speaking?'निवेदन सुरू आहे...':status,style:const TextStyle(color:teal,fontSize:12))),
+    Padding(padding:const EdgeInsets.all(10),child:Column(children:[if(generating)const LinearProgressIndicator(color:teal),Text(speaking?'निवेदन सुरू आहे...':status,style:const TextStyle(color:teal,fontSize:12))])),
   ]);
   Widget settings()=>ListView(padding:const EdgeInsets.all(20),children:[
     const Text('Settings',style:TextStyle(fontSize:25,fontWeight:FontWeight.w800)),info(Icons.palette_outlined,'Theme','Pure Black • Teal'),info(Icons.video_settings_outlined,'Video quality','1080p Full HD हे पुढील export टप्प्याचे लक्ष्य.'),info(Icons.upload_file_outlined,'YouTube upload','Manual upload — तुझ्या नियंत्रणात.'),info(Icons.history,'Topic history',used.length.toString()+' विषय वापरले गेले.'),
