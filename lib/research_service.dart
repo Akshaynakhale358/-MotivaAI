@@ -29,7 +29,7 @@ class ResearchService {
   static Future<List<ResearchSource>> _searchHindi(String query) async {
     final uri=Uri.https('hi.wikipedia.org','/w/api.php',{
       'action':'query','generator':'search','gsrsearch':query,'gsrnamespace':'0',
-      'gsrlimit':'6','prop':'extracts|info','explaintext':'1','exchars':'6500',
+      'gsrlimit':'10','prop':'extracts|info','explaintext':'1','exchars':'12000',
       'inprop':'url','format':'json','formatversion':'2'
     });
     final response=await _client.get(uri,headers:{'User-Agent':'MotivaAI/1.0 (Android app; source research)'})
@@ -110,12 +110,12 @@ class ResearchService {
       for(final s in found) {
         final key=s.title.toLowerCase();
         if(seen.add(key)) sources.add(s);
-        if(sources.length>=9) break;
+        if(sources.length>=12) break;
       }
-      if(sources.length>=9) break;
+      if(sources.length>=12) break;
     }
     if(sources.length<2) throw Exception('या विषयासाठी किमान दोन हिंदी संदर्भ सापडले नाहीत. वेगळा विषय निवडा.');
-    final relevant=sources.take(6).toList();
+    final relevant=sources.take(8).toList();
     final sections=<String>[];
     var total=0;
     for(final s in relevant) {
@@ -124,7 +124,7 @@ class ResearchService {
       var count=0;
       for(final sentence in words) {
         final n=_words(sentence);
-        if(count+n>190) break;
+        if(count+n>230) break;
         selected.add(sentence.trim());
         count+=n;
       }
@@ -133,12 +133,12 @@ class ResearchService {
         total+=count;
       }
     }
-    if(total<560) throw Exception('या विषयावर पुरेशी तपासता येणारी हिंदी माहिती मिळाली नाही. चुकीची किंवा बनावट माहिती न घालता हा व्हिडिओ थांबवला आहे.');
+    if(total<360) throw Exception('या विषयावर अनेक शोधांनंतरही पुरेशी तपासता येणारी हिंदी माहिती मिळाली नाही. चुकीची किंवा बनावट माहिती न घालता हा व्हिडिओ थांबवला आहे.');
     final intro='नमस्कार दोस्तों। आज हम एक ऐसे विषय की पड़ताल करेंगे जिसके बारे में कई सवाल पूछे जाते हैं: ${topic.title}। इस वीडियो में हम केवल उपलब्ध लिखित संदर्भों में दर्ज जानकारी पर ध्यान देंगे। लोककथाओं, अनुमान और प्रमाणित जानकारी को अलग-अलग समझेंगे।';
     final outro='इस विषय पर उपलब्ध जानकारी को समझने के बाद एक बात साफ है: किसी रहस्य को सुलझाने के लिए कहानी से ज्यादा जरूरी प्रमाण होते हैं। जहाँ स्रोतों में मतभेद या जानकारी की कमी है, वहाँ हमने उसे निश्चित सच बताने के बजाय खुला सवाल माना है। वीडियो में उपयोग किए गए संदर्भ और चित्रों के लाइसेंस की जानकारी साथ में दी गई है।';
     final script='$intro\n\n${sections.join('\n\n')}\n\n$outro';
     final wordCount=_words(script);
-    if(wordCount<620) throw Exception('संदर्भों से केवल ${wordCount} शब्द मिले। 5–10 मिनट की तथ्य-आधारित Script के लिए पर्याप्त स्रोत नहीं हैं; दूसरा विषय चुनें।');
+    if(wordCount<420) throw Exception('संदर्भों से केवल ${wordCount} शब्द मिले। विश्वसनीय जानकारी से कम-से-कम 3 मिनट की Script नहीं बन सकी; दूसरा विषय चुनें।');
     final images=await _images(_commonsQuery(topic));
     if(images.length<3) throw Exception('या विषयासाठी वापरता येतील असे किमान तीन मुक्त परवान्याचे चित्र सापडले नाहीत. कॉपीराइटचा धोका टाळण्यासाठी व्हिडिओ तयार केला नाही.');
     final sourceLines=relevant.map((s)=>'स्रोत: ${s.title}\n${s.url}').join('\n\n');
