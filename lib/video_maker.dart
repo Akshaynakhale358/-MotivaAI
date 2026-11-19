@@ -18,12 +18,12 @@ class VideoMaker {
   }
 
   static List<String> _splitForTts(String script) {
-    final sentences=script.split(RegExp(r'(?<=[।.!?])\\s+'));
+    final sentences=script.split(RegExp(r'(?<=[।.!?])\s+'));
     final chunks=<String>[];
     var current=StringBuffer();
     for(final sentence in sentences) {
       if(sentence.length>2600) {
-        for(final word in sentence.split(RegExp(r'\\s+'))) {
+        for(final word in sentence.split(RegExp(r'\s+'))) {
           if(current.length+word.length+1>2600 && current.isNotEmpty) { chunks.add(current.toString().trim()); current=StringBuffer(); }
           current.write('$word ');
         }
@@ -94,7 +94,7 @@ class VideoMaker {
       audioParts.add(part);
     }
     final concatList=File('${work.path}/audio_parts.txt');
-    await concatList.writeAsString(audioParts.map((f)=>"file '${f.path}'").join('\\n'),flush:true);
+    await concatList.writeAsString(audioParts.map((f)=>"file '${f.path}'").join('\n'),flush:true);
     final audioJoin=await FFmpegKit.execute('-y -f concat -safe 0 -i ${_quote(concatList.path)} -c:a pcm_s16le ${_quote(audio.path)}');
     if(!ReturnCode.isSuccess(await audioJoin.getReturnCode()) || !await audio.exists() || await audio.length()<1000) {
       throw Exception('Hindi voice चे audio भाग जोडता आले नाहीत.');
@@ -119,7 +119,7 @@ class VideoMaker {
       filters.add('[$i:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1,fps=25,format=yuv420p[v$i]');
     }
     final concatInputs=List.generate(imagePaths.length,(i)=>'[v$i]').join();
-    filters.add('$concatInputs concat=n=${imagePaths.length}:v=1:a=0,drawbox=x=0:y=0:w=iw:h=ih:color=0x050B0D@0.24:t=fill,drawbox=x=70:y=70:w=1780:h=940:color=0x071516@0.18:t=6,drawtext=fontfile=/system/fonts/NotoSansDevanagari-Regular.ttf:textfile=${titleFile.path}:fontcolor=0x20D6C2:fontsize=52:x=(w-text_w)/2:y=90,subtitles=${srt.path}:force_style=FontName=Noto Sans Devanagari\,FontSize=22\,PrimaryColour=&H00FFFFFF\,OutlineColour=&H80000000\,BorderStyle=1\,Outline=2\,Alignment=2\,MarginV=85[vout]');
+    filters.add('$concatInputs concat=n=${imagePaths.length}:v=1:a=0,drawbox=x=0:y=0:w=iw:h=ih:color=0x050B0D@0.24:t=fill,drawbox=x=70:y=70:w=1780:h=940:color=0x071516@0.18:t=6,drawtext=font=NotoSansDevanagari:textfile=${titleFile.path}:fontcolor=0x20D6C2:fontsize=52:x=(w-text_w)/2:y=90,subtitles=${srt.path}[vout]');
     filters.add('[$narrationIndex:a]volume=1.0[narr]');
     filters.add('[$musicIndex:a]volume=0.055[music]');
     filters.add('[narr][music]amix=inputs=2:duration=first:dropout_transition=3[aout]');
