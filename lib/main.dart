@@ -97,14 +97,18 @@ class _HomeState extends State<Home> {
     final p=await SharedPreferences.getInstance();
     await p.setBool('daily_auto',enabled);
     if(enabled) {
+      final constraints=Constraints(networkType:NetworkType.connected,requiresBatteryNotLow:true);
+      final foreground=ForegroundServiceConfig(notificationTitle:'MotivaAI',notificationText:'आजचा नवीन Mystery व्हिडिओ तयार होत आहे.',notificationChannelName:'MotivaAI Video Generation',foregroundServiceType:ForegroundServiceType.dataSync);
+      await Workmanager().registerOneOffTask('motiva_first_generation',dailyTaskName,
+        existingWorkPolicy:ExistingWorkPolicy.keep,constraints:constraints,foregroundServiceConfig:foreground);
       await Workmanager().registerPeriodicTask(dailyUniqueName,dailyTaskName,
-        frequency:const Duration(hours:24),
+        frequency:const Duration(hours:24),initialDelay:const Duration(hours:24),
         existingPeriodicWorkPolicy:ExistingPeriodicWorkPolicy.update,
-        constraints:Constraints(networkType:NetworkType.connected,requiresBatteryNotLow:true),
-        foregroundServiceConfig:ForegroundServiceConfig(notificationTitle:'MotivaAI',notificationText:'आजचा नवीन Mystery व्हिडिओ तयार होत आहे.',notificationChannelName:'MotivaAI Video Generation',foregroundServiceType:ForegroundServiceType.dataSync));
-      await p.setString('daily_status','रोजच्या स्वयंचलित निर्मितीचे वेळापत्रक सुरू आहे. Android योग्य वेळी चालवेल.');
+        constraints:constraints,foregroundServiceConfig:foreground);
+      await p.setString('daily_status','पहिला व्हिडिओ Background मध्ये सुरू होईल; नंतर साधारण 24 तासांनी नवीन व्हिडिओ तयार होईल.');
     } else {
       await Workmanager().cancelByUniqueName(dailyUniqueName);
+      await Workmanager().cancelByUniqueName('motiva_first_generation');
       await p.setString('daily_status','स्वयंचलित निर्मिती बंद आहे.');
     }
     if(mounted)setState(()=>autoDaily=enabled);
@@ -226,7 +230,7 @@ class _HomeState extends State<Home> {
   Widget settings()=>ListView(padding:const EdgeInsets.all(20),children:[
     const Text('Settings',style:TextStyle(fontSize:25,fontWeight:FontWeight.w800)),
     SwitchListTile(value:autoDaily,activeColor:teal,title:const Text('दररोज आपोआप व्हिडिओ तयार करा'),subtitle:const Text('App बंद असतानाही Android WorkManager वापरेल. Wi-Fi/Internet आणि Battery पुरेशी असणे आवश्यक.'),onChanged:(v)=>scheduleDaily(v)),
-    info(Icons.schedule,'Background वेळापत्रक','साधारण 24 तासांनी. Android वेळ बदलू शकतो; नेमक्या वेळी चालण्याची हमी नाही.'),
+    info(Icons.schedule,'Background वेळापत्रक','पहिला व्हिडिओ सुरू झाल्यावर पुढे साधारण 24 तासांनी. Android वेळ बदलू शकतो; नेमक्या वेळी चालण्याची हमी नाही.'),
     info(Icons.source,'माहितीचे स्रोत','हिंदी Wikipedia संदर्भ; संदर्भ आणि चित्रांचे परवाने Credits.txt मध्ये.'), 
     if(hindiVoices.isEmpty)info(Icons.record_voice_over,'Hindi voices','फोनमध्ये Hindi voice install करा: Android Text-to-Speech settings.'),
     if(hindiVoices.isNotEmpty)voicePicker('पुरुष आवाज निवडा / Preview',maleVoice,true),
