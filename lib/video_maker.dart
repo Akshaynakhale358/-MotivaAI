@@ -3,6 +3,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_new_full/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_full/return_code.dart';
+import 'package:ffmpeg_kit_flutter_new_full/ffmpeg_kit_config.dart';
 import 'package:file_saver/file_saver.dart';
 
 class VideoMaker {
@@ -67,10 +68,12 @@ class VideoMaker {
     final font='/system/fonts/NotoSansDevanagari-Regular.ttf';
     final vf="drawbox=x=55:y=65:w=1810:h=950:color=0x0B2224@0.78:t=fill,drawbox=x=80:y=90:w=1760:h=5:color=0x20D6C2@0.9:t=fill,drawtext=fontfile=$font:textfile=${titleFile.path}:fontcolor=0x20D6C2:fontsize=58:x=(w-text_w)/2:y=150,subtitles=${srt.path}";
     final command="-y -f lavfi -i color=c=0x050B0D:s=1920x1080:r=25 -i ${_quote(audio.path)} -vf ${_quote(vf)} -shortest -c:v mpeg4 -q:v 4 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart ${_quote(output.path)}";
+    FFmpegKitConfig.setFontDirectoryList(['/system/fonts']);
     final session=await FFmpegKit.execute(command);
     final code=await session.getReturnCode();
     if(!ReturnCode.isSuccess(code) || !await output.exists() || await output.length()<100000) {
-      final logs=await session.getLogsAsString();
+      final logItems=await session.getLogs();
+      final logs=logItems.map((item)=>item.getMessage()).join('\\n');
       throw Exception('Video render अयशस्वी. ${logs.length>900 ? logs.substring(logs.length-900) : logs}');
     }
     onStatus('Video Downloads मध्ये save होत आहे...');
