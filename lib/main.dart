@@ -1,186 +1,159 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() => runApp(const MotivaAIApp());
-
+void main() => runApp(const MotivaAI());
 const teal = Color(0xFF20D6C2);
-const pageBg = Color(0xFF050708);
+const bg = Color(0xFF050708);
 const panel = Color(0xFF111719);
 
-class MotivaAIApp extends StatelessWidget {
-  const MotivaAIApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'MotivaAI',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: pageBg,
-        colorScheme: const ColorScheme.dark(primary: teal, surface: panel),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-      ),
-      home: const HomePage(),
-    );
-  }
+class Topic {
+  final String id, title, place, clue;
+  const Topic(this.id, this.title, this.place, this.clue);
 }
-
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+const topics = <Topic>[
+  Topic('01','भारत की रहस्यमयी कंकाल झील','रूपकुंड, उत्तराखंड','बर्फ में मिले प्राचीन मानव कंकाल'),
+  Topic('02','भानगढ़ किले की अनसुलझी कहानी','राजस्थान','खंडहरों से जुड़ी लोककथाएँ'),
+  Topic('03','जतिंगा में पक्षियों का रहस्य','असम','पक्षियों का असामान्य व्यवहार'),
+  Topic('04','सिंधु घाटी की लिपि का रहस्य','प्राचीन भारत','आज तक पूरी तरह न पढ़े जा सके चिह्न'),
+  Topic('05','द्वारका के समुद्र के नीचे के अवशेष','गुजरात','समुद्र में मिले पुरातात्विक संकेत'),
+  Topic('06','लोनार झील कैसे बनी?','महाराष्ट्र','उल्कापिंड से बनी मानी जाने वाली झील'),
+  Topic('07','कुलधरा गाँव खाली क्यों हुआ?','राजस्थान','एक रात में गाँव छोड़ने की लोककथा'),
+  Topic('08','मैग्नेटिक हिल का सच','लद्दाख','आँखों को चढ़ाई पर जाती गाड़ी का भ्रम'),
+  Topic('09','अजंता की गुफाओं के रंग','महाराष्ट्र','सदियों बाद भी बची प्राचीन चित्रकारी'),
+  Topic('10','कोणार्क मंदिर का वास्तु रहस्य','ओडिशा','पत्थर के रथ जैसी अद्भुत रचना'),
+  Topic('11','बरमूडा त्रिकोण का रहस्य','अटलांटिक महासागर','जहाज़ों और विमानों से जुड़ी चर्चाएँ'),
+  Topic('12','नाज़्का की विशाल आकृतियाँ','पेरू','रेगिस्तान में बनी विशाल रेखाएँ'),
+  Topic('13','स्टोनहेंज किसने बनाया?','इंग्लैंड','प्राचीन पत्थरों का गोलाकार स्मारक'),
+  Topic('14','डायटलोव पास की घटना','रूस','बर्फीले पहाड़ों में हुई दुखद घटना'),
+  Topic('15','मैरी सेलेस्ट जहाज़ खाली क्यों मिला?','अटलांटिक महासागर','बिना चालक दल के मिला जहाज़'),
+  Topic('16','वॉयनिच पांडुलिपि','यूरोप','अज्ञात लिपि में लिखी पुरानी किताब'),
+  Topic('17','एंटीकाइथेरा मशीन','ग्रीस','प्राचीन खगोलीय गणना करने वाला यंत्र'),
+  Topic('18','ब्लड फॉल्स का लाल पानी','अंटार्कटिका','लाल रंग का बहता नमकीन पानी'),
+  Topic('19','मंगल ग्रह का चेहरा','मंगल ग्रह','पहली तस्वीरों में दिखा चेहरा जैसा आकार'),
+  Topic('20','वाह! सिग्नल क्या था?','अंतरिक्ष','रेडियो टेलीस्कोप में पकड़ा गया अनोखा संकेत'),
+];
+class MotivaAI extends StatelessWidget {
+  const MotivaAI({super.key});
   @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  int selected = 0;
-  String voice = 'पुरुष आवाज';
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: pageBg,
-        titleSpacing: 20,
-        title: const Row(children: [
-          Icon(Icons.visibility_outlined, color: teal, size: 27),
-          SizedBox(width: 10),
-          Text('MotivaAI', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: .3)),
-        ]),
-        actions: const [Padding(padding: EdgeInsets.only(right: 18), child: Icon(Icons.account_circle_outlined, color: teal, size: 27))],
-      ),
-      body: SafeArea(
-        child: IndexedStack(index: selected, children: [
-          _home(),
-          _create(),
-          _videos(),
-          _settings(),
-        ]),
-      ),
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: const Color(0xFF0C1112),
-        indicatorColor: teal.withValues(alpha: .16),
-        selectedIndex: selected,
-        onDestinationSelected: (v) => setState(() => selected = v),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home, color: teal), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.movie_creation_outlined), selectedIcon: Icon(Icons.movie_creation, color: teal), label: 'Create'),
-          NavigationDestination(icon: Icon(Icons.video_library_outlined), selectedIcon: Icon(Icons.video_library, color: teal), label: 'My Videos'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings, color: teal), label: 'Settings'),
-        ],
-      ),
-    );
-  }
-
-  Widget _home() => ListView(padding: const EdgeInsets.fromLTRB(18, 12, 18, 28), children: [
-    Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF123A39), Color(0xFF101719), Color(0xFF111719)]),
-        border: Border.all(color: teal.withValues(alpha: .22)),
-      ),
-      child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('YOUR DAILY MYSTERY STUDIO', style: TextStyle(color: teal, fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.bold)),
-        SizedBox(height: 13),
-        Text('रहस्यों की दुनिया\nअब आपके हाथ में.', style: TextStyle(fontSize: 27, height: 1.25, fontWeight: FontWeight.w800)),
-        SizedBox(height: 9),
-        Text('Hindi mystery videos बनाएं — script से Full HD export तक.', style: TextStyle(color: Colors.white70, height: 1.5)),
-      ]),
-    ),
-    const SizedBox(height: 22),
-    const Text('आजचा व्हिडिओ', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
-    const SizedBox(height: 12),
-    _tile(Icons.auto_awesome, 'नवीन रहस्यकथा तयार करा', '5–10 मिनिटांची हिंदी कथा', () => setState(() => selected = 1)),
-    const SizedBox(height: 12),
-    const Text('तुमचा व्हिडिओ प्रवास', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-    const SizedBox(height: 12),
-    Row(children: [
-      Expanded(child: _stat('01', 'Daily video')),
-      const SizedBox(width: 10),
-      Expanded(child: _stat('1080p', 'Full HD')),
-      const SizedBox(width: 10),
-      Expanded(child: _stat('2', 'AI voices')),
-    ]),
-    const SizedBox(height: 20),
-    const Text('कसे काम करेल?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-    const SizedBox(height: 10),
-    _step('01', 'रहस्य निवडा', 'नवीन विषय किंवा सुचवलेली कथा'),
-    _step('02', 'AI व्हिडिओ तयार करेल', 'स्क्रिप्ट, आवाज, दृश्ये आणि subtitles'),
-    _step('03', 'Preview आणि Export', 'तपासून फोनमध्ये सेव्ह करा'),
-  ]);
-
-  Widget _create() => ListView(padding: const EdgeInsets.all(20), children: [
-    const Text('Create Video', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
-    const SizedBox(height: 8),
-    const Text('तुमच्या पुढील हिंदी रहस्यकथेची सुरुवात करा.', style: TextStyle(color: Colors.white60)),
-    const SizedBox(height: 22),
-    _tile(Icons.lightbulb_outline, 'आजचा विषय सुचवा', 'AI कडून नवीन mystery topic', () => _notice('विषय सुचवण्याची सुविधा पुढील टप्प्यात जोडली जाईल.')),
-    const SizedBox(height: 18),
-    const Text('कथेचा विषय', style: TextStyle(fontWeight: FontWeight.w600)),
-    const SizedBox(height: 8),
-    TextField(maxLines: 3, decoration: InputDecoration(hintText: 'उदा. रात्री 12 वाजता दिसणारे रहस्यमय स्टेशन...', filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none))),
-    const SizedBox(height: 18),
-    const Text('AI आवाज निवडा', style: TextStyle(fontWeight: FontWeight.w600)),
-    const SizedBox(height: 8),
-    Wrap(spacing: 10, children: ['पुरुष आवाज', 'महिला आवाज'].map((v) => ChoiceChip(label: Text(v), selected: voice == v, selectedColor: teal.withValues(alpha: .2), onSelected: (_) => setState(() => voice = v))).toList()),
-    const SizedBox(height: 18),
-    _tile(Icons.high_quality, '1080p Full HD', 'Landscape YouTube video • 5–10 min', () {}),
-    const SizedBox(height: 22),
-    FilledButton.icon(onPressed: () => _notice('AI script, voice आणि video generation पुढील टप्प्यात जोडले जातील.'), icon: const Icon(Icons.auto_awesome), label: const Padding(padding: EdgeInsets.all(14), child: Text('व्हिडिओ तयार करा'))),
-    const SizedBox(height: 10),
-    const Text('टीप: हा पहिला अॅप नमुना आहे. प्रत्यक्ष AI निर्मितीसाठी सुरक्षित backend आणि AI सेवांची जोडणी आवश्यक आहे.', style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5)),
-  ]);
-
-  Widget _videos() => ListView(padding: const EdgeInsets.all(20), children: [
-    const Text('My Videos', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
-    const SizedBox(height: 12),
-    Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(20)), child: const Column(children: [
-      Icon(Icons.video_library_outlined, color: teal, size: 48),
-      SizedBox(height: 12),
-      Text('अजून व्हिडिओ नाहीत', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-      SizedBox(height: 6),
-      Text('तयार केलेले व्हिडिओ येथे दिसतील.', style: TextStyle(color: Colors.white60)),
-    ])),
-  ]);
-
-  Widget _settings() => ListView(padding: const EdgeInsets.all(20), children: [
-    const Text('Settings', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
-    const SizedBox(height: 18),
-    _tile(Icons.palette_outlined, 'Theme', 'Pure Black • Teal', () {}),
-    _tile(Icons.video_settings_outlined, 'Video quality', '1080p Full HD', () {}),
-    _tile(Icons.upload_file_outlined, 'YouTube upload', 'Manual upload — तुमच्या नियंत्रणात', () {}),
-    _tile(Icons.info_outline, 'About MotivaAI', 'Hindi Mystery Video Maker', () {}),
-  ]);
-
-  Widget _tile(IconData icon, String title, String subtitle, VoidCallback onTap) => Material(
-    color: panel, borderRadius: BorderRadius.circular(17),
-    child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(17), child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
-      Container(width: 44, height: 44, decoration: BoxDecoration(color: teal.withValues(alpha: .12), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: teal)),
-      const SizedBox(width: 13),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 4),
-        Text(subtitle, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-      ])),
-      const Icon(Icons.chevron_right, color: Colors.white38),
-    ]))),
+  Widget build(BuildContext context) => MaterialApp(
+    debugShowCheckedModeBanner:false, title:'MotivaAI',
+    theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:bg,colorScheme:const ColorScheme.dark(primary:teal,surface:panel),useMaterial3:true),
+    home:const Home(),
   );
-
-  Widget _stat(String value, String label) => Container(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(16)), child: Column(children: [
-    Text(value, style: const TextStyle(color: teal, fontSize: 20, fontWeight: FontWeight.w800)),
-    const SizedBox(height: 5),
-    Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-  ]));
-
-  Widget _step(String number, String title, String subtitle) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(children: [
-    Text(number, style: const TextStyle(color: teal, fontWeight: FontWeight.w800)),
-    const SizedBox(width: 14),
-    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+}
+class Home extends StatefulWidget {
+  const Home({super.key});
+  @override
+  State<Home> createState()=>_HomeState();
+}
+class _HomeState extends State<Home> {
+  final tts=FlutterTts();
+  final custom=TextEditingController();
+  int tab=0,voice=0;
+  bool ready=false,speaking=false;
+  List<String> used=[];
+  Topic? topic;
+  String script='',status='मोफत ऑफलाइन कथा निर्मिती.';
+  @override
+  void initState(){
+    super.initState();
+    tts.setCompletionHandler(()=>setState(()=>speaking=false));
+    tts.setErrorHandler((_)=>setState(()=>status='फोनमध्ये हिंदी आवाज उपलब्ध नाही.'));
+    init();
+  }
+  String day(DateTime d)=>d.year.toString()+'-'+d.month.toString()+'-'+d.day.toString();
+  Future<void> init() async {
+    final p=await SharedPreferences.getInstance();
+    used=p.getStringList('used_topics')??[];
+    if(p.getString('topic_day')==day(DateTime.now())){
+      final id=p.getString('topic_id');
+      for(final t in topics){if(t.id==id) topic=t;}
+      script=p.getString('daily_script')??'';
+    }
+    if(topic==null) await nextTopic();
+    if(mounted)setState(()=>ready=true);
+  }
+  Future<void> nextTopic() async {
+    var options=topics.where((t)=>!used.contains(t.id)).toList();
+    if(options.isEmpty){used.clear();options=topics;}
+    final t=options[DateTime.now().microsecondsSinceEpoch%options.length];
+    await setTopic(t);
+  }
+  Future<void> setTopic(Topic t) async {
+    topic=t;
+    if(!used.contains(t.id))used.add(t.id);
+    script=makeScript(t);
+    final p=await SharedPreferences.getInstance();
+    await p.setStringList('used_topics',used);
+    await p.setString('topic_day',day(DateTime.now()));
+    await p.setString('topic_id',t.id);
+    await p.setString('daily_script',script);
+    if(mounted)setState(()=>status='नवीन विषय आणि हिंदी Script तयार झाली.');
+  }
+  String makeScript(Topic t){
+    final seed=t.id.codeUnits.fold<int>(0,(a,b)=>a+b);
+    const openings=['दुनिया में कुछ सवाल ऐसे हैं जिनका जवाब आज भी पूरी तरह हमारे पास नहीं है। आज की कहानी ऐसे ही एक रहस्य की है।','इतिहास के पन्नों में कई ऐसी घटनाएँ दर्ज हैं जो हमें सोचने पर मजबूर कर देती हैं।','कल्पना कीजिए, आप ऐसी जगह पर हैं जहाँ हर पत्थर एक अनकही कहानी छिपाए हुए है।'];
+    const turns=['समय के साथ इस घटना को लेकर अलग-अलग विचार सामने आए। कुछ बातें प्रमाणों पर आधारित हैं, जबकि कुछ केवल लोककथाएँ हैं।','जितनी जानकारी सामने आई, उतना ही यह सवाल गहरा होता गया कि आखिर उस समय वास्तव में हुआ क्या था।','इस विषय को समझने के लिए इतिहास, भूगोल और उपलब्ध वैज्ञानिक प्रमाणों को साथ देखना जरूरी है।'];
+    const endings=['रहस्य का आनंद लेते हुए तथ्य और कल्पना के बीच फर्क बनाए रखना जरूरी है। आपकी राय में इसकी सबसे संभावित वजह क्या हो सकती है?','शायद आने वाले समय में नई खोजें इस कहानी को और स्पष्ट करें। तब तक यह सवाल हमारी जिज्ञासा बनाए रखेगा।','इस कहानी से पता चलता है कि हर रहस्य का जवाब खोजने के लिए धैर्य और प्रमाण दोनों जरूरी हैं।'];
+    return t.title+'\\n\\n'+openings[seed%3]+'\\n\\nआज हम बात कर रहे हैं '+t.place+' से जुड़े इस रहस्य की। इसका मुख्य संकेत है: '+t.clue+'।\\n\\nसबसे पहले इसकी पृष्ठभूमि समझते हैं। किसी भी रहस्यमयी घटना को समझने के लिए उसके समय, स्थान और उपलब्ध जानकारी को ध्यान में रखना जरूरी है। '+t.place+' का नाम इस विषय के साथ इसलिए जुड़ा है क्योंकि यहाँ से जुड़ी कुछ घटनाओं और खोजों ने लोगों की जिज्ञासा बढ़ाई।\\n\\nअब सबसे बड़ा सवाल है — '+t.clue+'। इस सवाल को लेकर कई तरह की व्याख्याएँ की गई हैं। एक ओर वे तथ्य हैं जिन्हें दस्तावेज़ों, शोध या प्रत्यक्ष अवलोकन से समझा जा सकता है। दूसरी ओर ऐसी कहानियाँ भी हैं जिनकी स्वतंत्र पुष्टि जरूरी है।\\n\\n'+turns[(seed+1)%3]+'\\n\\nसंभावित वजहों पर नज़र डालें तो प्राकृतिक, ऐतिहासिक और मानवीय कारणों की जाँच करनी होगी। कई बार कोई घटना उस समय के सीमित ज्ञान के कारण असाधारण लगती है, लेकिन बाद में विज्ञान और शोध उसकी बेहतर व्याख्या कर देते हैं। कुछ मामलों में जरूरी जानकारी समय के साथ खो जाती है। पुराने रिकॉर्ड, भौगोलिक बदलाव और मानवीय याददाश्त हमारी समझ को प्रभावित कर सकते हैं।\\n\\nइस कहानी का एक और पहलू है लोगों की कल्पना। जब किसी सवाल का पूरा जवाब नहीं मिलता, तो उसके आसपास कई किस्से बन जाते हैं। इसलिए हर दावे को सच मानने के बजाय प्रमाणों को प्राथमिकता देना जरूरी है।\\n\\nतो आज हमने जाना '+t.title+' के बारे में। इस विषय से जुड़े कुछ सवाल अब भी चर्चा में हैं और नई जानकारी मिलने पर हमारी समझ बदल सकती है।\\n\\n'+endings[(seed+2)%3]+'\\n\\nअगर आपको ऐसी रहस्यमयी कहानियाँ पसंद हैं, तो अगली कहानी के लिए जुड़े रहिए।';
+  }
+  Future<void> customScript() async {
+    final s=custom.text.trim();if(s.isEmpty){msg('आधी विषय लिहा.');return;}
+    await setTopic(Topic('custom_'+DateTime.now().millisecondsSinceEpoch.toString(),s,'आपके चुने हुए विषय पर','इस विषय से जुड़ा अनसुलझा सवाल'));
+    custom.clear();setState(()=>tab=2);
+  }
+  Future<void> speak() async {
+    if(script.isEmpty)return;
+    await tts.stop();await tts.setLanguage('hi-IN');await tts.setSpeechRate(.45);await tts.setPitch(voice==0?.82:1.18);
+    final r=await tts.speak(script);
+    if(mounted)setState(()=>speaking=r==1);
+  }
+  Future<void> stop() async {await tts.stop();if(mounted)setState(()=>speaking=false);}
+  void msg(String s)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));
+  @override
+  void dispose(){tts.stop();custom.dispose();super.dispose();}
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(backgroundColor:bg,title:const Row(children:[Icon(Icons.visibility_outlined,color:teal),SizedBox(width:9),Text('MotivaAI',style:TextStyle(fontWeight:FontWeight.w800))])),
+    body:SafeArea(child:!ready?const Center(child:CircularProgressIndicator(color:teal)):IndexedStack(index:tab,children:[home(),create(),scriptPage(),settings()])),
+    bottomNavigationBar:NavigationBar(backgroundColor:const Color(0xFF0C1112),indicatorColor:teal.withValues(alpha:.16),selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:const[
+      NavigationDestination(icon:Icon(Icons.home_outlined),label:'Home'),
+      NavigationDestination(icon:Icon(Icons.auto_awesome_outlined),label:'Create'),
+      NavigationDestination(icon:Icon(Icons.article_outlined),label:'Script'),
+      NavigationDestination(icon:Icon(Icons.settings_outlined),label:'Settings'),
+    ]),
+  );
+  Widget home()=>ListView(padding:const EdgeInsets.all(18),children:[
+    Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(borderRadius:BorderRadius.circular(22),gradient:const LinearGradient(colors:[Color(0xFF123A39),Color(0xFF101719)]),border:Border.all(color:teal.withValues(alpha:.2))),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Text('YOUR DAILY MYSTERY STUDIO',style:TextStyle(color:teal,fontSize:10,letterSpacing:2)),
+      SizedBox(height:12),Text('हर दिन एक नया रहस्य.',style:TextStyle(fontSize:27,fontWeight:FontWeight.w800)),
+      SizedBox(height:8),Text('मोफत ऑफलाइन विषय आणि हिंदी Script निर्मिती.',style:TextStyle(color:Colors.white70)),
     ])),
-  ]));
-
-  void _notice(String message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: const Color(0xFF173C3A)));
+    const SizedBox(height:22),const Text('आजचा नवीन विषय',style:TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+    const SizedBox(height:10),Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Text(topic?.place??'',style:const TextStyle(color:teal)),const SizedBox(height:8),Text(topic?.title??'',style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text(topic?.clue??'',style:const TextStyle(color:Colors.white60)),
+    ])),
+    const SizedBox(height:12),FilledButton.icon(onPressed:nextTopic,icon:const Icon(Icons.refresh),label:const Text('दुसरा नवीन विषय निवडा')),
+    const SizedBox(height:16),info(Icons.history,'Repeat विषय टाळणे','वापरलेले विषय फोनमध्ये सेव्ह राहतात.'),info(Icons.record_voice_over,'Hindi Voice','फोनमध्ये उपलब्ध असलेला TTS आवाज वापरतो.'),info(Icons.cloud_off,'Free Offline Mode','या टप्प्यासाठी API key किंवा paid service लागत नाही.'),Text(status,style:const TextStyle(color:teal,fontSize:12)),
+  ]);
+  Widget create()=>ListView(padding:const EdgeInsets.all(20),children:[
+    const Text('Create Story',style:TextStyle(fontSize:25,fontWeight:FontWeight.w800)),const SizedBox(height:8),const Text('स्वतःचा विषय लिहा आणि हिंदी Script तयार करा.',style:TextStyle(color:Colors.white60)),
+    const SizedBox(height:18),TextField(controller:custom,maxLines:3,decoration:InputDecoration(hintText:'हिंदी रहस्यकथेचा विषय लिहा...',filled:true,fillColor:panel,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
+    const SizedBox(height:12),FilledButton.icon(onPressed:customScript,icon:const Icon(Icons.auto_awesome),label:const Text('Script तयार करा')),
+    const SizedBox(height:22),const Text('Voice style',style:TextStyle(fontWeight:FontWeight.bold)),Wrap(spacing:10,children:[
+      ChoiceChip(label:const Text('पुरुष शैली'),selected:voice==0,onSelected:(_)=>setState(()=>voice=0)),ChoiceChip(label:const Text('महिला शैली'),selected:voice==1,onSelected:(_)=>setState(()=>voice=1)),
+    ]),
+    const SizedBox(height:8),const Text('टीप: खरा पुरुष/महिला आवाज फोनमध्ये install असलेल्या Hindi voices वर अवलंबून आहे. Pitch बदलल्याने प्रत्येक फोनवर वेगळा gender voice मिळेलच असे नाही.',style:TextStyle(color:Colors.white54,fontSize:12)),
+    const SizedBox(height:20),info(Icons.high_quality,'Video Export पुढील टप्प्यात','16:9 • 1080p • 5–10 मिनिटे हे लक्ष्य आहे.'),
+  ]);
+  Widget scriptPage()=>Column(children:[
+    Padding(padding:const EdgeInsets.fromLTRB(16,12,16,4),child:Row(children:[const Expanded(child:Text('Hindi Script',style:TextStyle(fontSize:22,fontWeight:FontWeight.w800))),IconButton(onPressed:speak,icon:const Icon(Icons.play_circle_fill,color:teal,size:30)),IconButton(onPressed:stop,icon:const Icon(Icons.stop_circle_outlined))])),
+    Expanded(child:SingleChildScrollView(padding:const EdgeInsets.all(18),child:SelectableText(script,style:const TextStyle(fontSize:15,height:1.7)))),
+    Padding(padding:const EdgeInsets.all(10),child:Text(speaking?'निवेदन सुरू आहे...':status,style:const TextStyle(color:teal,fontSize:12))),
+  ]);
+  Widget settings()=>ListView(padding:const EdgeInsets.all(20),children:[
+    const Text('Settings',style:TextStyle(fontSize:25,fontWeight:FontWeight.w800)),info(Icons.palette_outlined,'Theme','Pure Black • Teal'),info(Icons.video_settings_outlined,'Video quality','1080p Full HD हे पुढील export टप्प्याचे लक्ष्य.'),info(Icons.upload_file_outlined,'YouTube upload','Manual upload — तुझ्या नियंत्रणात.'),info(Icons.history,'Topic history',used.length.toString()+' विषय वापरले गेले.'),
+  ]);
+  Widget info(IconData icon,String title,String subtitle)=>Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(16)),child:Row(children:[Icon(icon,color:teal),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:4),Text(subtitle,style:const TextStyle(color:Colors.white60,fontSize:12))]))]));
 }
