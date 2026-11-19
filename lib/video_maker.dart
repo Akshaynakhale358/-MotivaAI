@@ -17,6 +17,25 @@ class VideoMaker {
     return '${two(h)}:${two(m)}:${two(s)},${milli.toString().padLeft(3,'0')}';
   }
 
+  static List<String> _splitForTts(String script) {
+    final sentences=script.split(RegExp(r'(?<=[।.!?])\\s+'));
+    final chunks=<String>[];
+    var current=StringBuffer();
+    for(final sentence in sentences) {
+      if(sentence.length>2600) {
+        for(final word in sentence.split(RegExp(r'\\s+'))) {
+          if(current.length+word.length+1>2600 && current.isNotEmpty) { chunks.add(current.toString().trim()); current=StringBuffer(); }
+          current.write('$word ');
+        }
+      } else {
+        if(current.length+sentence.length+2>2600 && current.isNotEmpty) { chunks.add(current.toString().trim()); current=StringBuffer(); }
+        current.write('$sentence ');
+      }
+    }
+    if(current.isNotEmpty) chunks.add(current.toString().trim());
+    return chunks.where((x)=>x.isNotEmpty).toList();
+  }
+
   static String _makeSrt(String script) {
     final clean=script.replaceAll(RegExp(r'[#*_]+'), '').replaceAll('\r','');
     final words=clean.split(RegExp(r'\s+')).where((w)=>w.isNotEmpty).toList();
@@ -62,9 +81,23 @@ class VideoMaker {
     await tts.setPitch(voiceStyle==0 ? .92 : 1.08);
     await tts.awaitSynthCompletion(true);
     onStatus('Hindi निवेदन तयार होत आहे...');
-    final synth=await tts.synthesizeToFile(script,audio.path,true);
-    if(synth!=1 || !await audio.exists() || await audio.length()<1000) {
-      throw Exception('फोनचा Hindi TTS आवाज audio file तयार करू शकला नाही. Hindi voice pack install करा.');
+    final speechChunks=_splitForTts(script);
+    if(speechChunks.isEmpty) throw Exception('निवेदनासाठी Script रिकामी आहे.');
+    final audioParts=<File>[];
+    for(var i=0;i<speechChunks.length;i++) {
+      onStatus('Hindi voice तयार होत आहे... ${i+1}/${speechChunks.length}');
+      final part=File('${work.path}/voice_${i.toString().padLeft(3,'0')}.wav');
+      final synth=await tts.synthesizeToFile(speechChunks[i],part.path,true);
+      if(synth!=1 || !await part.exists() || await part.length()<1000) {
+        throw Exception('Hindi TTS voice chunk ${i+1} तयार करू शकला नाही. फोनमध्ये Hindi voice pack install करा.');
+      }
+      audioParts.add(part);
+    }
+    final concatList=File('${work.path}/audio_parts.txt');
+    await concatList.writeAsString(audioParts.map((f)=>"file '${f.path}'").join('\\n'),flush:true);
+    final audioJoin=await FFmpegKit.execute('-y -f concat -safe 0 -i ${_quote(concatList.path)} -c:a pcm_s16le ${_quote(audio.path)}');
+    if(!ReturnCode.isSuccess(await audioJoin.getReturnCode()) || !await audio.exists() || await audio.length()<1000) {
+      throw Exception('Hindi voice चे audio भाग जोडता आले नाहीत.');
     }
     await srt.writeAsString(_makeSrt(script),flush:true);
     await titleFile.writeAsString(title,flush:true);
