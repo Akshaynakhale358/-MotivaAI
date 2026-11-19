@@ -138,7 +138,6 @@ class VideoMaker {
       name:'MotivaAI_${safe}_${DateTime.now().millisecondsSinceEpoch}',
       filePath:output.path,
       fileExtension:'mp4',
-      mimeType:MimeType.mp4,
       subfolder:'MotivaAI',
     );
     await FileSaver.instance.saveToDownloads(
