@@ -21,6 +21,7 @@ void motivaCallbackDispatcher() {
     ui.DartPluginRegistrant.ensureInitialized();
     final prefs=await SharedPreferences.getInstance();
     final today=_dayKey(DateTime.now());
+    if(!(prefs.getBool('daily_auto')??false)) return true;
     if(prefs.getString('daily_generated_day')==today) return true;
     try {
       await prefs.setString('daily_status','आजचा व्हिडिओ Background मध्ये तयार होत आहे...');
