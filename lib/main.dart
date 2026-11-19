@@ -53,7 +53,7 @@ class _HomeState extends State<Home> {
   final custom=TextEditingController();
   int tab=0,voice=0;
   bool ready=false,speaking=false,generating=false;
-  List<String> used=[];
+  List<String> used=[],usedTitles=[];
   Topic? topic;
   String script='',status='मोफत ऑफलाइन कथा निर्मिती.';
   @override
@@ -67,6 +67,7 @@ class _HomeState extends State<Home> {
   Future<void> init() async {
     final p=await SharedPreferences.getInstance();
     used=p.getStringList('used_topics')??[];
+    usedTitles=p.getStringList('used_titles')??[];
     if(p.getString('topic_day')==day(DateTime.now())){
       final id=p.getString('topic_id');
       for(final t in topics){if(t.id==id) topic=t;}
@@ -81,12 +82,16 @@ class _HomeState extends State<Home> {
     final t=options[DateTime.now().microsecondsSinceEpoch%options.length];
     await setTopic(t);
   }
+  String titleKey(String value)=>value.trim().toLowerCase().replaceAll(RegExp(r'\\s+'),' ');
   Future<void> setTopic(Topic t) async {
+    if(usedTitles.contains(titleKey(t.title))){if(mounted)msg('हा विषय आधी वापरला आहे. दुसरा विषय निवडा.');return;}
     topic=t;
     if(!used.contains(t.id))used.add(t.id);
+    usedTitles.add(titleKey(t.title));
     script=makeScript(t);
     final p=await SharedPreferences.getInstance();
     await p.setStringList('used_topics',used);
+    await p.setStringList('used_titles',usedTitles);
     await p.setString('topic_day',day(DateTime.now()));
     await p.setString('topic_id',t.id);
     await p.setString('daily_script',script);
