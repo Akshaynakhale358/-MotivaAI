@@ -78,11 +78,11 @@ class _HomeState extends State<Home> {
   }
   Future<void> nextTopic() async {
     var options=topics.where((t)=>!used.contains(t.id)).toList();
-    if(options.isEmpty){used.clear();options=topics;}
+    if(options.isEmpty){if(mounted)setState(()=>status='या App मधील सर्व सध्याचे विषय वापरले गेले आहेत. जुना विषय पुन्हा निवडला जाणार नाही. नवीन विषय जोडणे आवश्यक आहे.');return;}
     final t=options[DateTime.now().microsecondsSinceEpoch%options.length];
     await setTopic(t);
   }
-  String titleKey(String value)=>value.trim().toLowerCase().replaceAll(RegExp(r'\\s+'),' ');
+  String titleKey(String value)=>value.trim().toLowerCase().replaceAll(RegExp(r'\s+'),' ');
   Future<void> setTopic(Topic t) async {
     if(usedTitles.contains(titleKey(t.title))){if(mounted)msg('हा विषय आधी वापरला आहे. दुसरा विषय निवडा.');return;}
     topic=t;
