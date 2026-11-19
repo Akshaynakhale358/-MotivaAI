@@ -1,10 +1,14 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'video_maker.dart';
 import 'topic_library.dart';
+import 'research_service.dart';
+import 'daily_worker.dart';
+import 'package:workmanager/workmanager.dart';
 
-void main() => runApp(const MotivaAI());
+Future<void> main() async { WidgetsFlutterBinding.ensureInitialized(); await Workmanager().initialize(motivaCallbackDispatcher); runApp(const MotivaAI()); }
 const teal = Color(0xFF20D6C2);
 const bg = Color(0xFF050708);
 const panel = Color(0xFF111719);
@@ -27,7 +31,9 @@ class _HomeState extends State<Home> {
   final tts=FlutterTts();
   final custom=TextEditingController();
   int tab=0,voice=0;
-  bool ready=false,speaking=false,generating=false;
+  bool ready=false,speaking=false,generating=false,autoDaily=false;
+  List<Map<String,String>> hindiVoices=[];
+  Map<String,String>? maleVoice,femaleVoice;
   List<String> used=[],usedTitles=[];
   Topic? topic;
   String script='',status='मोफत ऑफलाइन कथा निर्मिती.';
@@ -43,6 +49,13 @@ class _HomeState extends State<Home> {
     final p=await SharedPreferences.getInstance();
     used=p.getStringList('used_topics')??[];
     usedTitles=p.getStringList('used_titles')??[];
+    autoDaily=p.getBool('daily_auto')??false;
+    status=p.getString('daily_status')??status;
+    final savedMale=p.getString('male_voice'), savedFemale=p.getString('female_voice');
+    if(savedMale!=null) maleVoice=_decodeVoice(savedMale);
+    if(savedFemale!=null) femaleVoice=_decodeVoice(savedFemale);
+    await loadHindiVoices();
+    if(autoDaily) await scheduleDaily(true);
     if(p.getString('topic_day')==day(DateTime.now())){
       final id=p.getString('topic_id');
       for(final t in topics){if(t.id==id) topic=t;}
@@ -51,6 +64,55 @@ class _HomeState extends State<Home> {
     if(topic==null) await nextTopic();
     if(mounted)setState(()=>ready=true);
   }
+  Map<String,String>? _decodeVoice(String value) { try { final d=jsonDecode(value); if(d is Map) return d.map((k,v)=>MapEntry(k.toString(),v.toString())); } catch (_) {} return null; }
+  String _voiceKey(Map<String,String> v)=>'${v['name']??''}|${v['locale']??''}';
+  Future<void> loadHindiVoices() async {
+    try {
+      final raw=await tts.getVoices;
+      final found=<Map<String,String>>[];
+      for(final item in raw) {
+        if(item is! Map) continue;
+        final locale=(item['locale']??'').toString();
+        if(!locale.toLowerCase().startsWith('hi')) continue;
+        final name=(item['name']??'Hindi voice').toString();
+        found.add({'name':name,'locale':locale});
+      }
+      hindiVoices=found;
+      if(hindiVoices.isNotEmpty) {
+        maleVoice??=hindiVoices.firstWhere((v)=>v['name']!.toLowerCase().contains('male')&&!v['name']!.toLowerCase().contains('female'),orElse:()=>hindiVoices.first);
+        femaleVoice??=hindiVoices.firstWhere((v)=>v['name']!.toLowerCase().contains('female'),orElse:()=>hindiVoices.length>1?hindiVoices[1]:hindiVoices.first);
+        final p=await SharedPreferences.getInstance();
+        await p.setString('male_voice',jsonEncode(maleVoice));
+        await p.setString('female_voice',jsonEncode(femaleVoice));
+        await p.setString('daily_voice',jsonEncode(maleVoice));
+      }
+    } catch (_) { if(mounted)setState(()=>status='फोनमधील Hindi voices शोधता आले नाहीत.'); }
+  }
+  Future<void> scheduleDaily(bool enabled) async {
+    final p=await SharedPreferences.getInstance();
+    await p.setBool('daily_auto',enabled);
+    if(enabled) {
+      await Workmanager().registerPeriodicTask(dailyUniqueName,dailyTaskName,
+        frequency:const Duration(hours:24),
+        existingPeriodicWorkPolicy:ExistingPeriodicWorkPolicy.update,
+        constraints:Constraints(networkType:NetworkType.connected,requiresBatteryNotLow:true),
+        foregroundServiceConfig:ForegroundServiceConfig(notificationTitle:'MotivaAI',notificationText:'आजचा नवीन Mystery व्हिडिओ तयार होत आहे.',notificationChannelName:'MotivaAI Video Generation',foregroundServiceType:ForegroundServiceType.dataSync));
+      await p.setString('daily_status','रोजच्या स्वयंचलित निर्मितीचे वेळापत्रक सुरू आहे. Android योग्य वेळी चालवेल.');
+    } else {
+      await Workmanager().cancelByUniqueName(dailyUniqueName);
+      await p.setString('daily_status','स्वयंचलित निर्मिती बंद आहे.');
+    }
+    if(mounted)setState(()=>autoDaily=enabled);
+  }
+  Future<void> previewVoice(Map<String,String>? selected) async {
+    if(selected==null){msg('फोनमध्ये हा Hindi voice उपलब्ध नाही.');return;}
+    await tts.stop();await tts.setLanguage('hi-IN');await tts.setVoice(selected);await tts.speak('नमस्कार दोस्तों, MotivaAI में आपका स्वागत है।');
+  }
+  Widget voicePicker(String label,Map<String,String>? selected,bool male) => Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text(label,style:const TextStyle(fontWeight:FontWeight.w700)),
+    DropdownButtonFormField<String>(value:selected==null?null:_voiceKey(selected),isExpanded:true,decoration:const InputDecoration(filled:true,fillColor:panel),items:hindiVoices.map((v)=>DropdownMenuItem(value:_voiceKey(v),child:Text(v['name']??'Hindi voice',overflow:TextOverflow.ellipsis))).toList(),onChanged:(key)async{if(key==null)return;final chosen=hindiVoices.firstWhere((v)=>_voiceKey(v)==key);setState(()=>male?maleVoice=chosen:femaleVoice=chosen);final p=await SharedPreferences.getInstance();await p.setString(male?'male_voice':'female_voice',jsonEncode(chosen));if(male)await p.setString('daily_voice',jsonEncode(chosen));}),
+    TextButton.icon(onPressed:()=>previewVoice(selected),icon:const Icon(Icons.play_arrow,color:teal),label:const Text('आवाज ऐकून पाहा')),
+  ]);
   Future<void> nextTopic() async {
     var options=topics.where((t)=>!used.contains(t.id)).toList();
     if(options.isEmpty){if(mounted)setState(()=>status='या App मधील सर्व सध्याचे विषय वापरले गेले आहेत. जुना विषय पुन्हा निवडला जाणार नाही. नवीन विषय जोडणे आवश्यक आहे.');return;}
@@ -83,8 +145,20 @@ class _HomeState extends State<Home> {
     if(generating || topic==null || script.isEmpty)return;
     setState((){generating=true;status='Video तयार करण्याची तयारी...';});
     try {
-      await VideoMaker.create(title:topic!.title,script:script,tts:tts,voiceStyle:voice,onStatus:(s){if(mounted)setState(()=>status=s);});
-      if(mounted)msg('Video Downloads/MotivaAI मध्ये सेव्ह झाला.');
+      final p=await SharedPreferences.getInstance();
+      setState(()=>status='Hindi संदर्भांमधून माहिती तपासत आहे...');
+      final bundle=await ResearchService.research(topic!);
+      script=bundle.script;
+      await p.setString('daily_script',script);
+      if(mounted)setState(()=>status='स्रोत तपासले. चित्रे आणि आवाज जोडत आहे...');
+      final chosenVoice=voice==0?maleVoice:femaleVoice;
+      final path=await VideoMaker.create(title:topic!.title,script:script,tts:tts,voiceStyle:voice,voice:chosenVoice,imagePaths:bundle.images.map((i)=>i.path).toList(),creditsText:bundle.credits,onStatus:(s){if(mounted)setState(()=>status=s);});
+      final today=day(DateTime.now());
+      await p.setString('daily_generated_day',today);
+      await p.setString('daily_video_path',path);
+      await p.setString('daily_video_title',topic!.title);
+      await p.setString('daily_status','आजचा स्रोतांसह व्हिडिओ तयार झाला आहे.');
+      if(mounted)msg('Video आणि Credits Downloads/MotivaAI मध्ये सेव्ह झाले.');
     } catch(e) {
       if(mounted){setState(()=>status='Video तयार झाला नाही.');msg(e.toString().replaceFirst('Exception: ',''));}
     } finally {if(mounted)setState(()=>generating=false);}
@@ -96,7 +170,7 @@ class _HomeState extends State<Home> {
   }
   Future<void> speak() async {
     if(script.isEmpty)return;
-    await tts.stop();await tts.setLanguage('hi-IN');await tts.setSpeechRate(.45);await tts.setPitch(voice == 0 ? 0.82 : 1.18);
+    await tts.stop();await tts.setLanguage('hi-IN');final chosenVoice=voice==0?maleVoice:femaleVoice;if(chosenVoice!=null)await tts.setVoice(chosenVoice);await tts.setSpeechRate(.45);
     final r=await tts.speak(script);
     if(mounted)setState(()=>speaking=r==1);
   }
@@ -136,7 +210,7 @@ class _HomeState extends State<Home> {
     const SizedBox(height:22),const Text('Voice style',style:TextStyle(fontWeight:FontWeight.bold)),Wrap(spacing:10,children:[
       ChoiceChip(label:const Text('पुरुष शैली'),selected:voice==0,onSelected:(_)=>setState(()=>voice=0)),ChoiceChip(label:const Text('महिला शैली'),selected:voice==1,onSelected:(_)=>setState(()=>voice=1)),
     ]),
-    const SizedBox(height:8),const Text('टीप: खरा पुरुष/महिला आवाज फोनमध्ये install असलेल्या Hindi voices वर अवलंबून आहे. Pitch बदलल्याने प्रत्येक फोनवर वेगळा gender voice मिळेलच असे नाही.',style:TextStyle(color:Colors.white54,fontSize:12)),
+    const SizedBox(height:8),const Text('खरे Hindi voices फोनच्या TTS engine मधून येतात. दोन वेगळे आवाज निवडा आणि Preview करून कोणता पुरुष/महिला आहे ते तपासा; प्रत्येक फोनमध्ये gender माहिती उपलब्ध नसते.',style:TextStyle(color:Colors.white54,fontSize:12)),
     const SizedBox(height:20),info(Icons.high_quality,'1080p MP4 Export','Script आणि फोनचा Hindi TTS आवाज वापरून MP4 तयार करा. व्हिडिओची लांबी Script वर अवलंबून असेल.'),
   ]);
   Widget scriptPage()=>Column(children:[
@@ -145,7 +219,14 @@ class _HomeState extends State<Home> {
     Padding(padding:const EdgeInsets.all(10),child:Column(children:[if(generating)const LinearProgressIndicator(color:teal),Text(speaking?'निवेदन सुरू आहे...':status,style:const TextStyle(color:teal,fontSize:12))])),
   ]);
   Widget settings()=>ListView(padding:const EdgeInsets.all(20),children:[
-    const Text('Settings',style:TextStyle(fontSize:25,fontWeight:FontWeight.w800)),info(Icons.palette_outlined,'Theme','Pure Black • Teal'),info(Icons.video_settings_outlined,'Video quality','1080p Full HD हे पुढील export टप्प्याचे लक्ष्य.'),info(Icons.upload_file_outlined,'YouTube upload','Manual upload — तुझ्या नियंत्रणात.'),info(Icons.history,'Topic history',used.length.toString()+' विषय वापरले गेले.'),
+    const Text('Settings',style:TextStyle(fontSize:25,fontWeight:FontWeight.w800)),
+    SwitchListTile(value:autoDaily,activeColor:teal,title:const Text('दररोज आपोआप व्हिडिओ तयार करा'),subtitle:const Text('App बंद असतानाही Android WorkManager वापरेल. Wi-Fi/Internet आणि Battery पुरेशी असणे आवश्यक.'),onChanged:(v)=>scheduleDaily(v)),
+    info(Icons.schedule,'Background वेळापत्रक','साधारण 24 तासांनी. Android वेळ बदलू शकतो; नेमक्या वेळी चालण्याची हमी नाही.'),
+    info(Icons.source,'माहितीचे स्रोत','हिंदी Wikipedia संदर्भ; संदर्भ आणि चित्रांचे परवाने Credits.txt मध्ये.'), 
+    if(hindiVoices.isEmpty)info(Icons.record_voice_over,'Hindi voices','फोनमध्ये Hindi voice install करा: Android Text-to-Speech settings.'),
+    if(hindiVoices.isNotEmpty)voicePicker('पुरुष आवाज निवडा / Preview',maleVoice,true),
+    if(hindiVoices.isNotEmpty)voicePicker('महिला आवाज निवडा / Preview',femaleVoice,false),
+    info(Icons.music_note,'Background Music','व्हिडिओसाठी App मध्ये तयार केलेला साधा ambient soundtrack.'),info(Icons.palette_outlined,'Theme','Pure Black • Teal'),info(Icons.upload_file_outlined,'YouTube upload','Manual upload — तुझ्या नियंत्रणात.'),info(Icons.history,'Topic history',used.length.toString()+' विषय वापरले गेले.'),Text(status,style:const TextStyle(color:teal,fontSize:12)),
   ]);
   Widget info(IconData icon,String title,String subtitle)=>Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(16)),child:Row(children:[Icon(icon,color:teal),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:4),Text(subtitle,style:const TextStyle(color:Colors.white60,fontSize:12))]))]));
 }
