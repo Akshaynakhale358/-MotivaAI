@@ -40,6 +40,7 @@ class VideoMaker {
     required String script,
     required FlutterTts tts,
     required int voiceStyle,
+    Map<String,String>? voice,
     required List<String> imagePaths,
     required String creditsText,
     required void Function(String) onStatus,
@@ -56,6 +57,7 @@ class VideoMaker {
     final output=File('${work.path}/MotivaAI_${safe}_${DateTime.now().millisecondsSinceEpoch}.mp4');
     await tts.stop();
     await tts.setLanguage('hi-IN');
+    if(voice!=null && voice.isNotEmpty) await tts.setVoice(voice);
     await tts.setSpeechRate(.43);
     await tts.setPitch(voiceStyle==0 ? .92 : 1.08);
     await tts.awaitSynthCompletion(true);
