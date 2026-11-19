@@ -7,7 +7,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_tts: ^4.2.3
+  flutter_tts: ^4.2.5
+  http: ^1.6.0
+  workmanager: ^0.10.10
   shared_preferences: ^2.5.3
   path_provider: ^2.1.5
   file_saver: ^0.7.0
